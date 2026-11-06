@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* Tokens: fonte da verdade é o DESIGN.md (seção 4). Mudou aqui, muda lá. */
+@theme {
+  --color-bg: #f5f2ea;
+  --color-surface: #fffefb;
+  --color-sunken: #ece8dd;
+  --color-fg: #1d1f1b;
+  --color-muted: #5f625a;
+  --color-border: #e2ddd0;
+  --color-accent: #c6e35a;
+  --color-accent-fg: #1d1f1b;
+  --color-route: #3e6b1f;
+  --color-topo: #e6e0d0;
+  --color-topo-strong: #dcd4c0;
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-control: 8px;
+  --radius-panel: 16px;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-bg);
+  /* Curvas de nível geradas por scripts/gen-topo.mjs */
+  background-image: url("/topo.svg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-route);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Some com a barra de rolagem do seletor de dias sem matar o scroll */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Atribuição do mapa no tom da página */
+.maplibregl-ctrl-attrib {
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
