@@ -20,8 +20,11 @@ export function TripMap() {
     let cleanup = () => {};
 
     // Import dinâmico: maplibre só existe no browser
-    import("maplibre-gl").then(({ Map, Marker, NavigationControl }) => {
+    import("maplibre-gl").then(({ Map, Marker, NavigationControl, setWorkerUrl, getVersion }) => {
       if (disposed || !container.current) return;
+
+      // Worker servido de public/vendor (ver scripts/copy-maplibre-worker.mjs); ?v= evita cache velho ao atualizar
+      setWorkerUrl(`/vendor/maplibre-gl-worker.mjs?v=${getVersion()}`);
 
       const map = new Map({
         container: container.current,

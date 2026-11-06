@@ -217,7 +217,7 @@ export function Dashboard() {
     <main className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
       <header className="mb-8">
         <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-balance sm:text-5xl">
-          {trip.city}
+          {trip.city} com meu amor
         </h1>
         <p className="mt-2 text-muted">
           {fmtLong(trip.start)} a {fmtLong(trip.end)}, em {trip.neighborhood}
