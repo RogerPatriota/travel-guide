@@ -21,24 +21,27 @@ Painel privado para um casal planejar e acompanhar a viagem a **Buenos Aires, de
 - **Mapa:** MapLibre 6 + OpenFreeMap (estilo positron), sem satélite. Rotas e pins usam o token `--color-route`, que deve combinar com o site. O worker do MapLibre é copiado para `public/vendor/` no `postinstall` (`scripts/copy-maplibre-worker.mjs`) e apontado com `setWorkerUrl`; sem isso o Turbopack quebra o mapa ("Worker failed to load").
 - **Home** segue o esboço: seletor de dias (filtra mapa e datas) · mapa · gastos · próximas datas · contagem regressiva · ideias de lugares.
 
-## Modelo de dados planejado (fase 2)
+## Modelo de dados (aplicado: `supabase/migrations/`, detalhes em `supabase/README.md`)
 - `places`: nome, bairro, categoria, lat/lng, link, notas, status (`ideia` → `decidido`), criado_por
 - `votes`: place_id, user_id, valor (curtiu / não curtiu / tanto faz). Os dois curtiram → lugar vira decidido.
 - `events`: data, hora, título, tipo (voo/hotel/passeio), place_id opcional, status
 - `expenses`: valor `numeric`, moeda (BRL/ARS/USD), categoria, pago_por, data, dividido. Objetivo: planejado vs. gasto e "quem deve quanto pra quem".
-- RLS em todas as tabelas, acesso só para os dois usuários; cadastro de outros emails bloqueado.
+- `profiles`: um por membro, criado por trigger no primeiro login de um email de `private.allowed_emails`. É a lista de membros: todo RLS passa por `private.is_member()` (compara `auth.uid()`).
+- RLS em todas as tabelas; hook `before-user-created` bloqueia cadastro fora da lista. Colunas em inglês, valores de enum em português.
+- Adiado: trigger "os dois curtiram → decidido" (fase 3), ordem/intervalo de eventos no dia (fase 4), cotação e acertos (fase 5).
 
 ## Fases
 1. ~~Setup + home com dados fixos~~ (feito)
-2. **Supabase:** tabelas, RLS, login magic link, home lendo dados reais ← **próxima**
+2. **Supabase:** tabelas, RLS, login magic link, home lendo dados reais ← **em andamento** (branch `feat/supabase-fase-2`; falta a configuração do painel, ver `supabase/README.md`)
 3. Ideias de lugares + votação + realtime
 4. Mapa com pontos por dia e rotas
 5. Gastos: lançar, converter moeda, acertar contas
 6. Polimento: mobile, PWA/offline para usar durante a viagem
 
 ## Pendências
-- **MCP do Supabase ainda não foi autenticado.** O usuário precisa rodar `/mcp` → `supabase` e fazer o login OAuth no navegador. Antes da fase 2, confirme que as ferramentas do Supabase aparecem; se não, guie esse passo.
-- Configurações de Auth no painel do Supabase (Site URL, redirect URLs) ficam com o usuário; guiar passo a passo.
+- **SMTP próprio (Resend) adiado pelo usuário em 06/11/2026.** Até lá: só o Roger recebe o magic link (SMTP padrão entrega só pro time da org, ~2 emails/h), templates travados, link só funciona no mesmo navegador. Depois do SMTP: trocar os templates Confirm sign up e Magic link (ver `supabase/README.md`). Login do Roger testado e funcionando.
+- MCP do Supabase autenticado (05/11/2026). Se cair, o OAuth precisa ser refeito num terminal interativo (`npx @anthropic-ai/claude-code` na pasta do projeto → `/mcp` → supabase → Authenticate); o `/mcp` do T3 Code não faz login.
+- Configurações de Auth no painel do Supabase ficam com o usuário (lista em `supabase/README.md`). O SMTP padrão só entrega para membros do time da org e ~2 emails/hora.
 - Repo no GitHub: `RogerPatriota/travel-guide`, `main` rastreando `origin/main`.
 
 ## Como trabalhar aqui
