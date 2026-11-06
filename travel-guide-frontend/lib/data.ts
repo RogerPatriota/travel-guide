@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/database.types";
 import type { ISODate, TripEvent } from "@/lib/trip";
@@ -26,6 +27,9 @@ export type HomeData = {
  * precisa rodar dentro de um <Suspense>. O RLS garante que só os dois veem.
  */
 export async function getHomeData(): Promise<HomeData> {
+  // O cliente do Supabase lê o relógio (expiração do token). Sem isso o Next
+  // tenta prerenderizar e acusa "unstable value Date.now()".
+  await connection();
   const supabase = await createClient();
 
   const { data: auth } = await supabase.auth.getClaims();
