@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { signOut } from "@/app/auth/actions";
 import { Countdown } from "@/components/Countdown";
 import { TripMap } from "@/components/TripMap";
+import type { HomeData } from "@/lib/data";
 import {
-  events,
   fmtDayMonth,
   fmtLong,
   fmtWeekday,
@@ -12,6 +13,7 @@ import {
   trip,
   tripDays,
   type ISODate,
+  type TripEvent,
 } from "@/lib/trip";
 
 type Selection = ISODate | "all";
@@ -133,8 +135,13 @@ function DaySelector({
   );
 }
 
-function Upcoming({ selected }: { selected: Selection }) {
-  const list = selected === "all" ? events : events.filter((e) => e.date === selected);
+function Loading() {
+  return <p className="text-sm text-muted">Carregando…</p>;
+}
+
+function Upcoming({ selected, events }: { selected: Selection; events: TripEvent[] | null }) {
+  const list =
+    events && (selected === "all" ? events : events.filter((e) => e.date === selected));
 
   return (
     <Panel
@@ -143,7 +150,9 @@ function Upcoming({ selected }: { selected: Selection }) {
         selected !== "all" && <span className="text-sm text-muted">{fmtLong(selected)}</span>
       }
     >
-      {list.length === 0 ? (
+      {!list ? (
+        <Loading />
+      ) : list.length === 0 ? (
         <p className="text-sm text-muted text-pretty">
           Nada marcado pra esse dia. Dia livre, ou dia de decidir alguma coisa.
         </p>
@@ -174,54 +183,102 @@ function Upcoming({ selected }: { selected: Selection }) {
   );
 }
 
-function Expenses() {
+const money = (currency: string, value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(value);
+
+function Expenses({ spent }: { spent: HomeData["spent"] | null }) {
   // TODO(content): valores reais de passagens e hospedagem (fase 5 lança pelo app)
   const paid = [
     { label: "Passagens", note: "pagas, valor a lançar" },
     { label: "Hospedagem", note: "paga, valor a lançar" },
   ];
+  const brl = spent?.find((s) => s.currency === "BRL")?.total ?? 0;
+  const others = spent?.filter((s) => s.currency !== "BRL") ?? [];
 
   return (
     <Panel title="Gastos">
       <p className="text-sm text-muted">Lançado até agora</p>
-      <p className="tabular mt-1 font-mono text-3xl font-medium">R$ 0</p>
-      <ul className="mt-5 space-y-2">
-        {paid.map((p) => (
-          <li key={p.label} className="flex items-baseline justify-between gap-3 text-sm">
-            <span>{p.label}</span>
-            <span className="text-muted">{p.note}</span>
-          </li>
-        ))}
-      </ul>
+      {!spent ? (
+        <p className="tabular mt-1 font-mono text-3xl font-medium text-muted">…</p>
+      ) : (
+        <>
+          <p className="tabular mt-1 font-mono text-3xl font-medium">{money("BRL", brl)}</p>
+          {others.length > 0 && (
+            <p className="tabular mt-1 font-mono text-sm text-muted">
+              {others.map((o) => `+ ${money(o.currency, o.total)}`).join(" · ")}
+            </p>
+          )}
+        </>
+      )}
+      {spent?.length === 0 && (
+        <ul className="mt-5 space-y-2">
+          {paid.map((p) => (
+            <li key={p.label} className="flex items-baseline justify-between gap-3 text-sm">
+              <span>{p.label}</span>
+              <span className="text-muted">{p.note}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </Panel>
   );
 }
 
-function Ideas() {
+function Ideas({ ideas, total }: { ideas: HomeData["ideas"] | null; total: number }) {
   return (
-    <Panel title="Ideias de lugares" className="flex flex-col">
-      <div className="flex flex-1 flex-col justify-center rounded-(--radius-control) border border-dashed border-border p-5">
-        <p className="font-medium text-balance">Nenhum lugar salvo ainda.</p>
-        <p className="mt-1 text-sm text-muted text-pretty">
-          Cada um joga aqui o que quer conhecer. Os dois curtiram, entra no roteiro.
-        </p>
-      </div>
+    <Panel
+      title="Ideias de lugares"
+      aside={total > 0 && <span className="tabular text-sm text-muted">{total}</span>}
+      className="flex flex-col"
+    >
+      {!ideas ? (
+        <Loading />
+      ) : ideas.length === 0 ? (
+        <div className="flex flex-1 flex-col justify-center rounded-(--radius-control) border border-dashed border-border p-5">
+          <p className="font-medium text-balance">Nenhum lugar salvo ainda.</p>
+          <p className="mt-1 text-sm text-muted text-pretty">
+            Cada um joga aqui o que quer conhecer. Os dois curtiram, entra no roteiro.
+          </p>
+        </div>
+      ) : (
+        <ul className="divide-y divide-border">
+          {ideas.map((p) => (
+            <li key={p.id} className="py-2.5 first:pt-0 last:pb-0">
+              <p className="truncate font-medium">{p.name}</p>
+              {p.neighborhood && <p className="truncate text-sm text-muted">{p.neighborhood}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
     </Panel>
   );
 }
 
-export function Dashboard() {
+export function Dashboard({ data }: { data: HomeData | null }) {
   const [selected, setSelected] = useState<Selection>("all");
 
   return (
     <main className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-      <header className="mb-8">
-        <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-balance sm:text-5xl">
-          {trip.city} com meu amor
-        </h1>
-        <p className="mt-2 text-muted">
-          {fmtLong(trip.start)} a {fmtLong(trip.end)}, em {trip.neighborhood}
-        </p>
+      <header className="mb-8 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div>
+          <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-balance sm:text-5xl">
+            {trip.city} com meu amor
+          </h1>
+          <p className="mt-2 text-muted">
+            {fmtLong(trip.start)} a {fmtLong(trip.end)}, em {trip.neighborhood}
+          </p>
+        </div>
+        {data && (
+          <form action={signOut} className="flex items-center gap-3 text-sm">
+            <span className="text-muted">{data.me.name}</span>
+            <button
+              type="submit"
+              className="rounded-(--radius-control) border border-border bg-surface px-3 py-1.5 transition-[border-color] duration-150 hover:border-muted"
+            >
+              Sair
+            </button>
+          </form>
+        )}
       </header>
 
       <div className="grid gap-4 lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:gap-6">
@@ -237,15 +294,15 @@ export function Dashboard() {
         </div>
 
         <div className="lg:col-span-4 lg:col-start-6 lg:row-start-1">
-          <Expenses />
+          <Expenses spent={data?.spent ?? null} />
         </div>
 
         <div className="lg:col-span-4 lg:col-start-6 lg:row-start-2">
-          <Upcoming selected={selected} />
+          <Upcoming selected={selected} events={data?.events ?? null} />
         </div>
 
         <div className="flex lg:col-span-3 lg:col-start-10 lg:row-start-2 [&>section]:flex-1">
-          <Ideas />
+          <Ideas ideas={data?.ideas ?? null} total={data?.ideasTotal ?? 0} />
         </div>
       </div>
     </main>

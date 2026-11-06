@@ -1,4 +1,5 @@
-// Dados da viagem. Por enquanto fixos aqui; na fase 2 vêm do Supabase.
+// Fatos fixos da viagem e helpers de data. O que muda (datas, gastos, lugares)
+// fica no Supabase e é lido em lib/data.ts.
 
 export type ISODate = `${number}-${number}-${number}`;
 
@@ -21,36 +22,7 @@ export const trip = {
   stay: { lng: -58.4245, lat: -34.58, label: "Hospedagem em Palermo" },
 };
 
-export const events: TripEvent[] = [
-  {
-    id: "voo-ida",
-    date: "2027-02-27",
-    title: "Voo de ida",
-    detail: "Companhia e horário a preencher", // TODO(content)
-    status: "pago",
-  },
-  {
-    id: "check-in",
-    date: "2027-02-27",
-    title: "Check-in em Palermo",
-    detail: "Endereço e horário a preencher", // TODO(content)
-    status: "pago",
-  },
-  {
-    id: "check-out",
-    date: "2027-03-07",
-    title: "Check-out",
-    detail: "Horário limite a preencher", // TODO(content)
-    status: "pago",
-  },
-  {
-    id: "voo-volta",
-    date: "2027-03-07",
-    title: "Voo de volta",
-    detail: "Companhia e horário a preencher", // TODO(content)
-    status: "pago",
-  },
-];
+// As datas (voos, hotel, passeios) vêm da tabela public.events: ver lib/data.ts.
 
 /** Converte "YYYY-MM-DD" em Date local (meia-noite), sem fuso UTC no meio */
 export function toLocalDate(iso: ISODate): Date {
