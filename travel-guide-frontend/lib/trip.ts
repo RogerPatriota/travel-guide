@@ -3,6 +3,8 @@
 
 export type ISODate = `${number}-${number}-${number}`;
 
+export type TravelMode = "carro" | "a_pe" | "transporte" | "bicicleta";
+
 export type TripEvent = {
   id: string;
   date: ISODate;
@@ -11,6 +13,15 @@ export type TripEvent = {
   title: string;
   detail: string;
   status: "pago" | "pendente" | "ideia";
+  /** Como se chega aqui vindo da parada anterior do dia */
+  arrival?: { mode: TravelMode; distanceM: number | null; durationS: number | null };
+};
+
+export const travelModeLabel: Record<TravelMode, string> = {
+  carro: "de carro",
+  a_pe: "a pé",
+  transporte: "de transporte",
+  bicicleta: "de bike",
 };
 
 export const trip = {
@@ -18,8 +29,9 @@ export const trip = {
   neighborhood: "Palermo",
   start: "2027-02-27" as ISODate,
   end: "2027-03-07" as ISODate,
-  /** Centro de Palermo [lng, lat] */
-  stay: { lng: -58.4245, lat: -34.58, label: "Hospedagem em Palermo" },
+  /** Centro aproximado de Palermo, só para enquadrar o mapa. O endereço da
+   * hospedagem fica no banco (places, categoria "hospedagem"), não no código. */
+  center: { lng: -58.4245, lat: -34.58 },
 };
 
 // As datas (voos, hotel, passeios) vêm da tabela public.events: ver lib/data.ts.

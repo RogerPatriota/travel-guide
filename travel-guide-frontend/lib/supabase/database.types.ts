@@ -26,9 +26,11 @@ export type Database = {
           id: number
           kind: Database["public"]["Enums"]["event_kind"]
           place_id: number | null
+          sort_order: number
           status: Database["public"]["Enums"]["event_status"]
           time: string | null
           title: string
+          travel_mode: Database["public"]["Enums"]["travel_mode"] | null
           updated_at: string
         }
         Insert: {
@@ -39,9 +41,11 @@ export type Database = {
           id?: never
           kind?: Database["public"]["Enums"]["event_kind"]
           place_id?: number | null
+          sort_order?: number
           status?: Database["public"]["Enums"]["event_status"]
           time?: string | null
           title: string
+          travel_mode?: Database["public"]["Enums"]["travel_mode"] | null
           updated_at?: string
         }
         Update: {
@@ -52,9 +56,11 @@ export type Database = {
           id?: never
           kind?: Database["public"]["Enums"]["event_kind"]
           place_id?: number | null
+          sort_order?: number
           status?: Database["public"]["Enums"]["event_status"]
           time?: string | null
           title?: string
+          travel_mode?: Database["public"]["Enums"]["travel_mode"] | null
           updated_at?: string
         }
         Relationships: [
@@ -208,6 +214,66 @@ export type Database = {
         }
         Relationships: []
       }
+      route_legs: {
+        Row: {
+          created_at: string
+          distance_m: number
+          duration_s: number
+          from_lat: number
+          from_lng: number
+          from_place_id: number
+          geometry: Json
+          id: number
+          mode: Database["public"]["Enums"]["travel_mode"]
+          to_lat: number
+          to_lng: number
+          to_place_id: number
+        }
+        Insert: {
+          created_at?: string
+          distance_m: number
+          duration_s: number
+          from_lat: number
+          from_lng: number
+          from_place_id: number
+          geometry: Json
+          id?: never
+          mode: Database["public"]["Enums"]["travel_mode"]
+          to_lat: number
+          to_lng: number
+          to_place_id: number
+        }
+        Update: {
+          created_at?: string
+          distance_m?: number
+          duration_s?: number
+          from_lat?: number
+          from_lng?: number
+          from_place_id?: number
+          geometry?: Json
+          id?: never
+          mode?: Database["public"]["Enums"]["travel_mode"]
+          to_lat?: number
+          to_lng?: number
+          to_place_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_legs_from_place_id_fkey"
+            columns: ["from_place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_legs_to_place_id_fkey"
+            columns: ["to_place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       votes: {
         Row: {
           created_at: string
@@ -256,9 +322,10 @@ export type Database = {
     }
     Enums: {
       currency: "BRL" | "ARS" | "USD"
-      event_kind: "voo" | "hotel" | "passeio" | "outro"
+      event_kind: "voo" | "hotel" | "passeio" | "outro" | "comida" | "compras"
       event_status: "pago" | "pendente" | "ideia"
       place_status: "ideia" | "decidido" | "descartado"
+      travel_mode: "carro" | "a_pe" | "transporte" | "bicicleta"
       vote_value: "curtiu" | "nao_curtiu" | "tanto_faz"
     }
     CompositeTypes: {
@@ -280,9 +347,10 @@ export const Constants = {
   public: {
     Enums: {
       currency: ["BRL", "ARS", "USD"],
-      event_kind: ["voo", "hotel", "passeio", "outro"],
+      event_kind: ["voo", "hotel", "passeio", "outro", "comida", "compras"],
       event_status: ["pago", "pendente", "ideia"],
       place_status: ["ideia", "decidido", "descartado"],
+      travel_mode: ["carro", "a_pe", "transporte", "bicicleta"],
       vote_value: ["curtiu", "nao_curtiu", "tanto_faz"],
     },
   },
