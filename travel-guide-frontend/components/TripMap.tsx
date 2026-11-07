@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Leg, MapData, MapPin, MapStop } from "@/lib/data";
-import { trip, type ISODate } from "@/lib/trip";
+import { momentColorVar, momentLabel, trip, type ISODate } from "@/lib/trip";
 
 // Estilo claro e neutro, grátis e sem chave (OpenFreeMap)
 const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
@@ -36,12 +36,13 @@ function legsGeoJSON(legs: Leg[]): GeoJSON.FeatureCollection {
   };
 }
 
-function pinElement(label: string, content: string | null) {
+/** color = token do momento (lib/trip.ts momentColorVar); hospedagem usa a rota */
+function pinElement(label: string, content: string | null, color = token("--color-route")) {
   const el = document.createElement("button");
   el.type = "button";
   el.setAttribute("aria-label", label);
   el.title = label;
-  const route = token("--color-route");
+  const route = color;
   const surface = token("--color-surface");
   if (content === null) {
     // Hospedagem: anel verde com miolo claro
@@ -187,12 +188,21 @@ export function TripMap({ data, selected }: { data: MapData | null; selected: IS
         Object.values(data.stops).forEach((day) => day?.forEach((s) => unique.set(s.placeId, s)));
         unique.forEach((s) => {
           if (data.stays.some((st) => st.placeId === s.placeId)) return;
-          add(s, pinElement(s.name, ""), popupContent(s.name));
+          add(
+            s,
+            pinElement(s.name, "", token(momentColorVar[s.moment])),
+            popupContent(s.name, momentLabel[s.moment]),
+          );
         });
       } else {
         (data.stops[selected] ?? []).forEach((s, i) => {
           const label = `${i + 1}. ${s.title}`;
-          add(s, pinElement(label, String(i + 1)), popupContent(label, s.time));
+          const sub = [momentLabel[s.moment], s.time].filter(Boolean).join(" · ");
+          add(
+            s,
+            pinElement(label, String(i + 1), token(momentColorVar[s.moment])),
+            popupContent(label, sub),
+          );
         });
       }
       // Hospedagem sempre aparece, a menos que já seja uma parada numerada do dia

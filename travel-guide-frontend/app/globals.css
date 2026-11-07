@@ -22,6 +22,26 @@
   --radius-panel: 16px;
 }
 
+/* Momentos do dia (lib/trip.ts → momentColorVar). Cada cor serve duas vezes:
+   cheia no pin do mapa (número branco) e clara no fundo da etiqueta (texto na
+   cor cheia). Todas passam AA nos dois usos. Sem terracota (DESIGN.md);
+   voo e hospedagem usam --color-route. */
+:root {
+  --color-moment-cafe-da-manha: #8a5f00;
+  --color-moment-almoco: #22706a;
+  --color-moment-lanche: #a3406f;
+  --color-moment-jantar: #7b2d52;
+  --color-moment-passeio: #2a5f99;
+  --color-moment-mercado: #4f5d68;
+  --color-moment-noite: #4a3d8a;
+  --color-moment-outro: #5f625a;
+}
+
+.moment-chip {
+  background-color: color-mix(in oklab, var(--moment) 14%, var(--color-surface));
+  color: var(--moment);
+}
+
 html {
   color-scheme: light;
 }

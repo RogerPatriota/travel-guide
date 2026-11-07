@@ -5,6 +5,46 @@ export type ISODate = `${number}-${number}-${number}`;
 
 export type TravelMode = "carro" | "a_pe" | "transporte" | "bicicleta";
 
+/** Para que a parada serve no dia (fica na parada e na sugestão, não no lugar) */
+export type DayMoment =
+  | "voo"
+  | "hospedagem"
+  | "cafe_da_manha"
+  | "almoco"
+  | "lanche"
+  | "jantar"
+  | "passeio"
+  | "mercado"
+  | "noite"
+  | "outro";
+
+export const momentLabel: Record<DayMoment, string> = {
+  voo: "Voo",
+  hospedagem: "Hospedagem",
+  cafe_da_manha: "Café da manhã",
+  almoco: "Almoço",
+  lanche: "Lanche da tarde",
+  jantar: "Jantar",
+  passeio: "Passeio",
+  mercado: "Mercado",
+  noite: "Noite",
+  outro: "Outro",
+};
+
+/** Token de cor de cada momento (definidos em app/globals.css). Etiqueta e pin usam o mesmo. */
+export const momentColorVar: Record<DayMoment, string> = {
+  voo: "--color-route",
+  hospedagem: "--color-route",
+  cafe_da_manha: "--color-moment-cafe-da-manha",
+  almoco: "--color-moment-almoco",
+  lanche: "--color-moment-lanche",
+  jantar: "--color-moment-jantar",
+  passeio: "--color-moment-passeio",
+  mercado: "--color-moment-mercado",
+  noite: "--color-moment-noite",
+  outro: "--color-moment-outro",
+};
+
 export type TripEvent = {
   id: string;
   date: ISODate;
@@ -13,6 +53,7 @@ export type TripEvent = {
   title: string;
   detail: string;
   status: "pago" | "pendente" | "ideia";
+  moment: DayMoment;
   /** Como se chega aqui vindo da parada anterior do dia */
   arrival?: { mode: TravelMode; distanceM: number | null; durationS: number | null };
 };

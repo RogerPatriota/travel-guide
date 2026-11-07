@@ -1,5 +1,6 @@
 // Gerado pelo MCP do Supabase (generate_typescript_types) a partir do schema
 // em supabase/migrations. Não editar à mão: regenerar quando o schema mudar.
+// (Os helpers no fim do arquivo são uma versão enxuta dos do gerador.)
 
 export type Json =
   | string
@@ -24,10 +25,11 @@ export type Database = {
           date: string
           detail: string | null
           id: number
-          kind: Database["public"]["Enums"]["event_kind"]
+          moment: Database["public"]["Enums"]["day_moment"]
           place_id: number | null
           sort_order: number
           status: Database["public"]["Enums"]["event_status"]
+          suggestion_id: number | null
           time: string | null
           title: string
           travel_mode: Database["public"]["Enums"]["travel_mode"] | null
@@ -39,10 +41,11 @@ export type Database = {
           date: string
           detail?: string | null
           id?: never
-          kind?: Database["public"]["Enums"]["event_kind"]
+          moment?: Database["public"]["Enums"]["day_moment"]
           place_id?: number | null
           sort_order?: number
           status?: Database["public"]["Enums"]["event_status"]
+          suggestion_id?: number | null
           time?: string | null
           title: string
           travel_mode?: Database["public"]["Enums"]["travel_mode"] | null
@@ -54,10 +57,11 @@ export type Database = {
           date?: string
           detail?: string | null
           id?: never
-          kind?: Database["public"]["Enums"]["event_kind"]
+          moment?: Database["public"]["Enums"]["day_moment"]
           place_id?: number | null
           sort_order?: number
           status?: Database["public"]["Enums"]["event_status"]
+          suggestion_id?: number | null
           time?: string | null
           title?: string
           travel_mode?: Database["public"]["Enums"]["travel_mode"] | null
@@ -76,6 +80,13 @@ export type Database = {
             columns: ["place_id"]
             isOneToOne: false
             referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_suggestion_id_fkey"
+            columns: ["suggestion_id"]
+            isOneToOne: false
+            referencedRelation: "suggestions"
             referencedColumns: ["id"]
           },
         ]
@@ -151,7 +162,6 @@ export type Database = {
           name: string
           neighborhood: string | null
           notes: string | null
-          status: Database["public"]["Enums"]["place_status"]
           updated_at: string
           url: string | null
         }
@@ -165,7 +175,6 @@ export type Database = {
           name: string
           neighborhood?: string | null
           notes?: string | null
-          status?: Database["public"]["Enums"]["place_status"]
           updated_at?: string
           url?: string | null
         }
@@ -179,7 +188,6 @@ export type Database = {
           name?: string
           neighborhood?: string | null
           notes?: string | null
-          status?: Database["public"]["Enums"]["place_status"]
           updated_at?: string
           url?: string | null
         }
@@ -274,34 +282,85 @@ export type Database = {
           },
         ]
       }
+      suggestions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string | null
+          id: number
+          moment: Database["public"]["Enums"]["day_moment"]
+          note: string | null
+          place_id: number
+          status: Database["public"]["Enums"]["suggestion_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          id?: never
+          moment: Database["public"]["Enums"]["day_moment"]
+          note?: string | null
+          place_id: number
+          status?: Database["public"]["Enums"]["suggestion_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          id?: never
+          moment?: Database["public"]["Enums"]["day_moment"]
+          note?: string | null
+          place_id?: number
+          status?: Database["public"]["Enums"]["suggestion_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestions_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       votes: {
         Row: {
           created_at: string
-          place_id: number
+          suggestion_id: number
           updated_at: string
           user_id: string
           value: Database["public"]["Enums"]["vote_value"]
         }
         Insert: {
           created_at?: string
-          place_id: number
+          suggestion_id: number
           updated_at?: string
           user_id?: string
           value: Database["public"]["Enums"]["vote_value"]
         }
         Update: {
           created_at?: string
-          place_id?: number
+          suggestion_id?: number
           updated_at?: string
           user_id?: string
           value?: Database["public"]["Enums"]["vote_value"]
         }
         Relationships: [
           {
-            foreignKeyName: "votes_place_id_fkey"
-            columns: ["place_id"]
+            foreignKeyName: "votes_suggestion_id_fkey"
+            columns: ["suggestion_id"]
             isOneToOne: false
-            referencedRelation: "places"
+            referencedRelation: "suggestions"
             referencedColumns: ["id"]
           },
           {
@@ -322,9 +381,19 @@ export type Database = {
     }
     Enums: {
       currency: "BRL" | "ARS" | "USD"
-      event_kind: "voo" | "hotel" | "passeio" | "outro" | "comida" | "compras"
+      day_moment:
+        | "voo"
+        | "hospedagem"
+        | "cafe_da_manha"
+        | "almoco"
+        | "lanche"
+        | "jantar"
+        | "passeio"
+        | "mercado"
+        | "noite"
+        | "outro"
       event_status: "pago" | "pendente" | "ideia"
-      place_status: "ideia" | "decidido" | "descartado"
+      suggestion_status: "ideia" | "decidido" | "descartado"
       travel_mode: "carro" | "a_pe" | "transporte" | "bicicleta"
       vote_value: "curtiu" | "nao_curtiu" | "tanto_faz"
     }
@@ -347,9 +416,20 @@ export const Constants = {
   public: {
     Enums: {
       currency: ["BRL", "ARS", "USD"],
-      event_kind: ["voo", "hotel", "passeio", "outro", "comida", "compras"],
+      day_moment: [
+        "voo",
+        "hospedagem",
+        "cafe_da_manha",
+        "almoco",
+        "lanche",
+        "jantar",
+        "passeio",
+        "mercado",
+        "noite",
+        "outro",
+      ],
       event_status: ["pago", "pendente", "ideia"],
-      place_status: ["ideia", "decidido", "descartado"],
+      suggestion_status: ["ideia", "decidido", "descartado"],
       travel_mode: ["carro", "a_pe", "transporte", "bicicleta"],
       vote_value: ["curtiu", "nao_curtiu", "tanto_faz"],
     },
