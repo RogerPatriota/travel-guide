@@ -31,6 +31,20 @@ export const momentLabel: Record<DayMoment, string> = {
   outro: "Outro",
 };
 
+/** Token de cor de cada momento (definidos em app/globals.css). Etiqueta e pin usam o mesmo. */
+export const momentColorVar: Record<DayMoment, string> = {
+  voo: "--color-route",
+  hospedagem: "--color-route",
+  cafe_da_manha: "--color-moment-cafe-da-manha",
+  almoco: "--color-moment-almoco",
+  lanche: "--color-moment-lanche",
+  jantar: "--color-moment-jantar",
+  passeio: "--color-moment-passeio",
+  mercado: "--color-moment-mercado",
+  noite: "--color-moment-noite",
+  outro: "--color-moment-outro",
+};
+
 export type TripEvent = {
   id: string;
   date: ISODate;

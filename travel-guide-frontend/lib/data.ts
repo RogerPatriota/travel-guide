@@ -7,6 +7,7 @@ import type { Enums } from "@/lib/supabase/database.types";
 import type { DayMoment, ISODate, TripEvent } from "@/lib/trip";
 
 export type Currency = Enums<"currency">;
+export type VoteValue = Enums<"vote_value">;
 export type { Leg } from "@/lib/routes";
 
 /** Sugestão = um lugar num momento (e talvez num dia). É nela que se vota. */
@@ -17,10 +18,12 @@ export type IdeaCard = {
   moment: DayMoment;
   /** null = "algum dia" */
   date: ISODate | null;
+  myVote: VoteValue | null;
+  partnerVote: VoteValue | null;
 };
 
 export type MapPin = { placeId: number; name: string; lat: number; lng: number };
-export type MapStop = MapPin & { eventId: number; title: string; time?: string };
+export type MapStop = MapPin & { eventId: number; title: string; time?: string; moment: DayMoment };
 
 export type MapData = {
   /** Hospedagem: aparece em qualquer dia */
@@ -31,7 +34,9 @@ export type MapData = {
 };
 
 export type HomeData = {
-  me: { name: string };
+  me: { id: string; name: string };
+  /** A outra pessoa; null enquanto ela não entrou no app pela primeira vez */
+  partner: { name: string } | null;
   events: TripEvent[];
   ideas: IdeaCard[];
   ideasTotal: number;
@@ -54,8 +59,8 @@ export async function getHomeData(): Promise<HomeData> {
   const userId = auth?.claims?.sub;
   if (!userId) redirect("/login");
 
-  const [profile, events, ideas, expenses, stays] = await Promise.all([
-    supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
+  const [profiles, events, ideas, expenses, stays] = await Promise.all([
+    supabase.from("profiles").select("id, display_name"),
     supabase
       .from("events")
       .select(
@@ -67,11 +72,13 @@ export async function getHomeData(): Promise<HomeData> {
       .order("id"),
     supabase
       .from("suggestions")
-      .select("id, moment, date, place:places!inner(name, neighborhood)", { count: "exact" })
+      .select("id, moment, date, place:places!inner(name, neighborhood), votes(user_id, value)", {
+        count: "exact",
+      })
       .eq("status", "ideia")
       .order("date", { nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .limit(5),
+      .order("moment")
+      .order("created_at", { ascending: false }),
     supabase.from("expenses").select("amount, currency").eq("is_planned", false),
     supabase
       .from("places")
@@ -80,7 +87,7 @@ export async function getHomeData(): Promise<HomeData> {
       .not("lat", "is", null),
   ]);
 
-  for (const r of [profile, events, ideas, expenses, stays]) {
+  for (const r of [profiles, events, ideas, expenses, stays]) {
     if (r.error) throw new Error(`Supabase: ${r.error.message}`);
   }
 
@@ -104,6 +111,7 @@ export async function getHomeData(): Promise<HomeData> {
       eventId: e.id,
       title: e.title,
       time: e.time?.slice(0, 5),
+      moment: e.moment,
     });
     (stopsForRoutes[date] ??= []).push({
       eventId: e.id,
@@ -121,7 +129,14 @@ export async function getHomeData(): Promise<HomeData> {
   );
 
   return {
-    me: { name: profile.data?.display_name ?? "" },
+    me: {
+      id: userId,
+      name: profiles.data?.find((p) => p.id === userId)?.display_name ?? "",
+    },
+    partner: (() => {
+      const other = profiles.data?.find((p) => p.id !== userId);
+      return other ? { name: other.display_name } : null;
+    })(),
     events: (events.data ?? []).map((e) => {
       const leg = legToEvent.get(e.id);
       return {
@@ -147,6 +162,8 @@ export async function getHomeData(): Promise<HomeData> {
       neighborhood: s.place.neighborhood,
       moment: s.moment,
       date: s.date as ISODate | null,
+      myVote: s.votes.find((v) => v.user_id === userId)?.value ?? null,
+      partnerVote: s.votes.find((v) => v.user_id !== userId)?.value ?? null,
     })),
     ideasTotal: ideas.count ?? 0,
     spent: [...totals].map(([currency, total]) => ({ currency, total })),

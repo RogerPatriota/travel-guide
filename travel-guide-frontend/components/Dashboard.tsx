@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/auth/actions";
 import { Countdown } from "@/components/Countdown";
+import { LiveRefresh } from "@/components/LiveRefresh";
+import { MomentChip } from "@/components/MomentChip";
 import { TripMap } from "@/components/TripMap";
+import { VoteButtons } from "@/components/VoteButtons";
 import type { HomeData } from "@/lib/data";
 import {
   fmtDayMonth,
@@ -11,7 +14,7 @@ import {
   fmtWeekday,
   toLocalDate,
   trip,
-  momentLabel,
+  momentColorVar,
   travelModeLabel,
   type DayMoment,
   tripDays,
@@ -206,7 +209,8 @@ function Upcoming({
                     // Mesmo número e cor do pin no mapa
                     <span
                       aria-label={`Parada ${stopNumbers.get(e.id)} no mapa`}
-                      className="tabular grid size-7 place-items-center rounded-full bg-route font-mono text-xs font-semibold text-surface"
+                      style={{ backgroundColor: `var(${momentColorVar[e.moment]})` }}
+                      className="tabular grid size-7 place-items-center rounded-full font-mono text-xs font-semibold text-surface"
                     >
                       {stopNumbers.get(e.id)}
                     </span>
@@ -214,10 +218,10 @@ function Upcoming({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                {!SILENT_MOMENTS.includes(e.moment) && (
-                  <p className="text-xs font-medium text-muted">{momentLabel[e.moment]}</p>
-                )}
-                <p className="font-medium">{e.title}</p>
+                <p className="flex min-w-0 items-center gap-2">
+                  {!SILENT_MOMENTS.includes(e.moment) && <MomentChip moment={e.moment} />}
+                  <span className="truncate font-medium">{e.title}</span>
+                </p>
                 <p className="truncate text-sm text-muted">
                   {e.time ? `${e.time} · ${e.detail}` : e.detail}
                 </p>
@@ -277,7 +281,15 @@ function Expenses({ spent }: { spent: HomeData["spent"] | null }) {
   );
 }
 
-function Ideas({ ideas, total }: { ideas: HomeData["ideas"] | null; total: number }) {
+function Ideas({
+  ideas,
+  total,
+  partnerName,
+}: {
+  ideas: HomeData["ideas"] | null;
+  total: number;
+  partnerName: string | null;
+}) {
   return (
     <Panel
       title="Ideias de lugares"
@@ -294,17 +306,26 @@ function Ideas({ ideas, total }: { ideas: HomeData["ideas"] | null; total: numbe
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-border">
+        // Rola dentro do painel no desktop para não esticar a grade
+        <ul className="divide-y divide-border lg:max-h-[440px] lg:overflow-y-auto lg:pr-1">
           {ideas.map((p) => (
-            <li key={p.id} className="py-2.5 first:pt-0 last:pb-0">
-              <p className="truncate font-medium">{p.name}</p>
-              {/* Onde a ideia entra no roteiro: é isso que se vota */}
-              <p className="truncate text-sm text-muted">
-                {p.moment === "outro" ? "Sem momento" : momentLabel[p.moment]}
-                {" · "}
-                {p.date ? fmtLong(p.date) : "algum dia"}
+            <li key={p.id} className="py-3 first:pt-0 last:pb-0">
+              {/* Onde a ideia entra no roteiro (momento + dia): é isso que se vota */}
+              <p className="flex min-w-0 items-center gap-2">
+                {p.moment !== "outro" && <MomentChip moment={p.moment} />}
+                <span className="truncate font-medium">{p.name}</span>
+              </p>
+              <p className="mt-0.5 truncate text-sm text-muted">
+                {p.date ? fmtLong(p.date) : "Algum dia"}
                 {p.neighborhood && ` · ${p.neighborhood}`}
               </p>
+              <VoteButtons
+                suggestionId={p.id}
+                placeName={p.name}
+                myVote={p.myVote}
+                partnerVote={p.partnerVote}
+                partnerName={partnerName}
+              />
             </li>
           ))}
         </ul>
@@ -323,6 +344,8 @@ export function Dashboard({ data }: { data: HomeData | null }) {
 
   return (
     <main className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+      {/* Voto ou roteiro mudou no outro celular: recarrega */}
+      {data && <LiveRefresh />}
       <header className="mb-8 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div>
           <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-balance sm:text-5xl">
@@ -371,7 +394,11 @@ export function Dashboard({ data }: { data: HomeData | null }) {
         </div>
 
         <div className="flex lg:col-span-3 lg:col-start-10 lg:row-start-2 [&>section]:flex-1">
-          <Ideas ideas={data?.ideas ?? null} total={data?.ideasTotal ?? 0} />
+          <Ideas
+            ideas={data?.ideas ?? null}
+            total={data?.ideasTotal ?? 0}
+            partnerName={data?.partner?.name ?? null}
+          />
         </div>
       </div>
     </main>
