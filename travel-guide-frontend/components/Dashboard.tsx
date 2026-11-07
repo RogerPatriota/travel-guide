@@ -11,7 +11,9 @@ import {
   fmtWeekday,
   toLocalDate,
   trip,
+  momentLabel,
   travelModeLabel,
+  type DayMoment,
   tripDays,
   type ISODate,
   type TripEvent,
@@ -158,6 +160,9 @@ function fmtArrival(a: NonNullable<TripEvent["arrival"]>) {
   return parts.join(" · ");
 }
 
+// Voo e hospedagem já se explicam pelo título; "outro" não diz nada
+const SILENT_MOMENTS: DayMoment[] = ["voo", "hospedagem", "outro"];
+
 function Upcoming({
   selected,
   events,
@@ -209,6 +214,9 @@ function Upcoming({
                 </div>
               )}
               <div className="min-w-0 flex-1">
+                {!SILENT_MOMENTS.includes(e.moment) && (
+                  <p className="text-xs font-medium text-muted">{momentLabel[e.moment]}</p>
+                )}
                 <p className="font-medium">{e.title}</p>
                 <p className="truncate text-sm text-muted">
                   {e.time ? `${e.time} · ${e.detail}` : e.detail}
@@ -290,7 +298,13 @@ function Ideas({ ideas, total }: { ideas: HomeData["ideas"] | null; total: numbe
           {ideas.map((p) => (
             <li key={p.id} className="py-2.5 first:pt-0 last:pb-0">
               <p className="truncate font-medium">{p.name}</p>
-              {p.neighborhood && <p className="truncate text-sm text-muted">{p.neighborhood}</p>}
+              {/* Onde a ideia entra no roteiro: é isso que se vota */}
+              <p className="truncate text-sm text-muted">
+                {p.moment === "outro" ? "Sem momento" : momentLabel[p.moment]}
+                {" · "}
+                {p.date ? fmtLong(p.date) : "algum dia"}
+                {p.neighborhood && ` · ${p.neighborhood}`}
+              </p>
             </li>
           ))}
         </ul>

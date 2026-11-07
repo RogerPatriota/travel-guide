@@ -4,15 +4,19 @@ import { connection } from "next/server";
 import { getLegs, type Leg, type Stop } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/database.types";
-import type { ISODate, TripEvent } from "@/lib/trip";
+import type { DayMoment, ISODate, TripEvent } from "@/lib/trip";
 
 export type Currency = Enums<"currency">;
 export type { Leg } from "@/lib/routes";
 
+/** Sugestão = um lugar num momento (e talvez num dia). É nela que se vota. */
 export type IdeaCard = {
   id: number;
   name: string;
   neighborhood: string | null;
+  moment: DayMoment;
+  /** null = "algum dia" */
+  date: ISODate | null;
 };
 
 export type MapPin = { placeId: number; name: string; lat: number; lng: number };
@@ -54,15 +58,18 @@ export async function getHomeData(): Promise<HomeData> {
     supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
     supabase
       .from("events")
-      .select("id, date, time, title, detail, status, travel_mode, place:places(id, name, lat, lng)")
+      .select(
+        "id, date, time, title, detail, status, moment, travel_mode, place:places(id, name, lat, lng)",
+      )
       .order("date")
       .order("sort_order")
       .order("time", { nullsFirst: false })
       .order("id"),
     supabase
-      .from("places")
-      .select("id, name, neighborhood", { count: "exact" })
+      .from("suggestions")
+      .select("id, moment, date, place:places!inner(name, neighborhood)", { count: "exact" })
       .eq("status", "ideia")
+      .order("date", { nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(5),
     supabase.from("expenses").select("amount, currency").eq("is_planned", false),
@@ -124,6 +131,7 @@ export async function getHomeData(): Promise<HomeData> {
         title: e.title,
         detail: e.detail ?? "",
         status: e.status,
+        moment: e.moment,
         arrival: e.travel_mode
           ? {
               mode: e.travel_mode,
@@ -133,7 +141,13 @@ export async function getHomeData(): Promise<HomeData> {
           : undefined,
       };
     }),
-    ideas: ideas.data ?? [],
+    ideas: (ideas.data ?? []).map((s) => ({
+      id: s.id,
+      name: s.place.name,
+      neighborhood: s.place.neighborhood,
+      moment: s.moment,
+      date: s.date as ISODate | null,
+    })),
     ideasTotal: ideas.count ?? 0,
     spent: [...totals].map(([currency, total]) => ({ currency, total })),
     map: {
