@@ -52,5 +52,12 @@ export function TripMap() {
     };
   }, []);
 
-  return <div ref={container} className="absolute inset-0" />;
+  // O CSS do MapLibre põe `position: relative` em .maplibregl-map, e por não estar
+  // em @layer ele vence os utilitários do Tailwind. Por isso o `absolute` fica num
+  // wrapper e o mapa só ocupa 100% dele.
+  return (
+    <div className="absolute inset-0">
+      <div ref={container} className="size-full" />
+    </div>
+  );
 }

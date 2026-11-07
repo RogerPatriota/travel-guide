@@ -281,7 +281,8 @@ export function Dashboard({ data }: { data: HomeData | null }) {
         )}
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:gap-6">
+      {/* grid-cols-1 = minmax(0,1fr): sem isso o seletor de dias estica a coluna e a página rola de lado no celular */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:gap-6">
         <div className="px-1 py-2 lg:col-span-3 lg:col-start-10 lg:row-start-1">
           <Countdown />
         </div>
