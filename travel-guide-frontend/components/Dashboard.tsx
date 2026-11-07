@@ -11,6 +11,7 @@ import {
   fmtWeekday,
   toLocalDate,
   trip,
+  travelModeLabel,
   tripDays,
   type ISODate,
   type TripEvent,
@@ -139,7 +140,34 @@ function Loading() {
   return <p className="text-sm text-muted">Carregando…</p>;
 }
 
-function Upcoming({ selected, events }: { selected: Selection; events: TripEvent[] | null }) {
+/** "a pé · 4 min · 260 m" / "de carro · ~8 min · 5,1 km" */
+function fmtArrival(a: NonNullable<TripEvent["arrival"]>) {
+  const parts = [travelModeLabel[a.mode]];
+  if (a.durationS !== null) {
+    const min = Math.max(1, Math.round(a.durationS / 60));
+    // Carro: o OSRM não conhece trânsito, então é estimativa otimista
+    parts.push(a.mode === "carro" ? `~${min} min` : `${min} min`);
+  }
+  if (a.distanceM !== null) {
+    parts.push(
+      a.distanceM < 1000
+        ? `${Math.round(a.distanceM / 10) * 10} m`
+        : `${(a.distanceM / 1000).toFixed(1).replace(".", ",")} km`,
+    );
+  }
+  return parts.join(" · ");
+}
+
+function Upcoming({
+  selected,
+  events,
+  stopNumbers,
+}: {
+  selected: Selection;
+  events: TripEvent[] | null;
+  /** Número da parada no mapa (só no dia escolhido), por id do evento */
+  stopNumbers: Map<string, number>;
+}) {
   const list =
     events && (selected === "all" ? events : events.filter((e) => e.date === selected));
 
@@ -160,17 +188,34 @@ function Upcoming({ selected, events }: { selected: Selection; events: TripEvent
         <ol className="divide-y divide-border">
           {list.map((e) => (
             <li key={e.id} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
-              <div className="w-10 shrink-0 text-center">
-                <span className="tabular block font-mono text-xl leading-none font-medium">
-                  {toLocalDate(e.date).getDate()}
-                </span>
-                <span className="mt-1 block text-xs text-muted">{fmtWeekday(e.date)}</span>
-              </div>
+              {selected === "all" ? (
+                <div className="w-10 shrink-0 text-center">
+                  <span className="tabular block font-mono text-xl leading-none font-medium">
+                    {toLocalDate(e.date).getDate()}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">{fmtWeekday(e.date)}</span>
+                </div>
+              ) : (
+                <div className="grid w-10 shrink-0 place-items-center">
+                  {stopNumbers.has(e.id) && (
+                    // Mesmo número e cor do pin no mapa
+                    <span
+                      aria-label={`Parada ${stopNumbers.get(e.id)} no mapa`}
+                      className="tabular grid size-7 place-items-center rounded-full bg-route font-mono text-xs font-semibold text-surface"
+                    >
+                      {stopNumbers.get(e.id)}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{e.title}</p>
                 <p className="truncate text-sm text-muted">
                   {e.time ? `${e.time} · ${e.detail}` : e.detail}
                 </p>
+                {e.arrival && (
+                  <p className="mt-0.5 text-xs text-muted">{fmtArrival(e.arrival)}</p>
+                )}
               </div>
               <span className="shrink-0 rounded-full bg-sunken px-2.5 py-1 text-xs text-muted">
                 {e.status}
@@ -256,6 +301,11 @@ function Ideas({ ideas, total }: { ideas: HomeData["ideas"] | null; total: numbe
 
 export function Dashboard({ data }: { data: HomeData | null }) {
   const [selected, setSelected] = useState<Selection>("all");
+  const stopNumbers = new Map(
+    selected === "all"
+      ? []
+      : (data?.map.stops[selected] ?? []).map((s, i) => [String(s.eventId), i + 1] as const),
+  );
 
   return (
     <main className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
@@ -290,7 +340,7 @@ export function Dashboard({ data }: { data: HomeData | null }) {
         <div className="flex flex-col gap-3 lg:col-span-5 lg:col-start-1 lg:row-span-2 lg:row-start-1">
           <DaySelector value={selected} onChange={setSelected} />
           <div className="relative min-h-[360px] flex-1 overflow-hidden rounded-(--radius-panel) border border-border bg-sunken lg:min-h-[560px]">
-            <TripMap />
+            <TripMap data={data?.map ?? null} selected={selected} />
           </div>
         </div>
 
@@ -299,7 +349,11 @@ export function Dashboard({ data }: { data: HomeData | null }) {
         </div>
 
         <div className="lg:col-span-4 lg:col-start-6 lg:row-start-2">
-          <Upcoming selected={selected} events={data?.events ?? null} />
+          <Upcoming
+            selected={selected}
+            events={data?.events ?? null}
+            stopNumbers={stopNumbers}
+          />
         </div>
 
         <div className="flex lg:col-span-3 lg:col-start-10 lg:row-start-2 [&>section]:flex-1">
