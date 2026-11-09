@@ -30,14 +30,19 @@ function legsGeoJSON(legs: Leg[]): GeoJSON.FeatureCollection {
     type: "FeatureCollection",
     features: legs.map((leg) => ({
       type: "Feature",
-      properties: { style: legStyle(leg) },
+      properties: { style: legStyle(leg), pending: Boolean(leg.pending) },
       geometry: { type: "LineString", coordinates: leg.coordinates },
     })),
   };
 }
 
 /** color = token do momento (lib/trip.ts momentColorVar); hospedagem usa a rota */
-function pinElement(label: string, content: string | null, color = token("--color-route")) {
+function pinElement(
+  label: string,
+  content: string | null,
+  color = token("--color-route"),
+  pending = false,
+) {
   const el = document.createElement("button");
   el.type = "button";
   el.setAttribute("aria-label", label);
@@ -47,9 +52,16 @@ function pinElement(label: string, content: string | null, color = token("--colo
   if (content === null) {
     // Hospedagem: anel verde com miolo claro
     el.style.cssText = `width:20px;height:20px;border-radius:9999px;background:${surface};border:5px solid ${route};box-shadow:0 0 0 2px ${surface};cursor:pointer`;
+  } else if (content === "" && pending) {
+    // Em votação, sem ordem: bolinha vazada na cor do momento
+    el.style.cssText = `width:16px;height:16px;border-radius:9999px;background:${surface};border:3px solid ${route};cursor:pointer;padding:0`;
   } else if (content === "") {
     // Visão de todos os dias: ponto sem número
     el.style.cssText = `width:16px;height:16px;border-radius:9999px;background:${route};border:2px solid ${surface};box-shadow:0 0 0 1px ${route};cursor:pointer;padding:0`;
+  } else if (pending) {
+    // Em votação: vazado (fundo claro, número e borda na cor do momento)
+    el.textContent = content;
+    el.style.cssText = `width:26px;height:26px;border-radius:9999px;background:${surface};color:${route};border:2px dashed ${route};font:600 12px/22px var(--font-mono);text-align:center;cursor:pointer;padding:0`;
   } else {
     el.textContent = content;
     el.style.cssText = `width:26px;height:26px;border-radius:9999px;background:${route};color:${surface};border:2px solid ${surface};box-shadow:0 0 0 1px ${route};font:600 12px/22px var(--font-mono);text-align:center;cursor:pointer;padding:0`;
@@ -120,7 +132,7 @@ export function TripMap({ data, selected }: { data: MapData | null; selected: IS
           source: "legs",
           filter: ["==", ["get", "style"], "solid"],
           layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": route, "line-width": 4 },
+          paint: { "line-color": route, "line-width": 4, "line-opacity": ["case", ["get", "pending"], 0.45, 1] },
         });
         map.addLayer({
           id: "legs-dotted",
@@ -128,7 +140,7 @@ export function TripMap({ data, selected }: { data: MapData | null; selected: IS
           source: "legs",
           filter: ["==", ["get", "style"], "dotted"],
           layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": route, "line-width": 4, "line-dasharray": [0, 1.8] },
+          paint: { "line-color": route, "line-width": 4, "line-dasharray": [0, 1.8], "line-opacity": ["case", ["get", "pending"], 0.45, 1] },
         });
         map.addLayer({
           id: "legs-approx",
@@ -195,12 +207,17 @@ export function TripMap({ data, selected }: { data: MapData | null; selected: IS
           );
         });
       } else {
-        (data.stops[selected] ?? []).forEach((s, i) => {
-          const label = `${i + 1}. ${s.title}`;
-          const sub = [momentLabel[s.moment], s.time].filter(Boolean).join(" · ");
+        // Numera só o que está decidido; pendente (alternativa em votação) não tem ordem
+        let n = 0;
+        (data.stops[selected] ?? []).forEach((s) => {
+          const num = s.pending ? "" : String(++n);
+          const label = s.pending ? `${s.title} (em votação)` : `${num}. ${s.title}`;
+          const sub = [momentLabel[s.moment], s.time, s.pending && "em votação"]
+            .filter(Boolean)
+            .join(" · ");
           add(
             s,
-            pinElement(label, String(i + 1), token(momentColorVar[s.moment])),
+            pinElement(label, num, token(momentColorVar[s.moment]), s.pending),
             popupContent(label, sub),
           );
         });

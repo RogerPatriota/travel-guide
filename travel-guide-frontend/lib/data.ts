@@ -1,7 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { getLegs, type Leg, type Stop } from "@/lib/routes";
+import { getLegs, inferMode, type Leg, type Stop } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/database.types";
 import type { DayMoment, ISODate, TripEvent } from "@/lib/trip";
@@ -23,7 +23,14 @@ export type IdeaCard = {
 };
 
 export type MapPin = { placeId: number; name: string; lat: number; lng: number };
-export type MapStop = MapPin & { eventId: number; title: string; time?: string; moment: DayMoment };
+export type MapStop = MapPin & {
+  eventId: number;
+  title: string;
+  time?: string;
+  moment: DayMoment;
+  /** Ainda em votação (só no Roteiro): pin vazado */
+  pending?: boolean;
+};
 
 export type MapData = {
   /** Hospedagem: aparece em qualquer dia */
@@ -106,7 +113,7 @@ export async function getHomeData(): Promise<HomeData> {
     // Sem modo informado: até 1,2 km da parada anterior é a pé; mais que isso, carro
     const prev = stopsForRoutes[date]?.at(-1);
     const mode =
-      e.travel_mode ?? (prev ? (metersBetween(prev, { lat: p.lat, lng: p.lng }) <= 1200 ? "a_pe" : "carro") : null);
+      e.travel_mode ?? (prev ? inferMode(prev, { lat: p.lat, lng: p.lng }) : null);
     (stops[date] ??= []).push({
       placeId: p.id,
       name: p.name,
@@ -184,11 +191,3 @@ export async function getHomeData(): Promise<HomeData> {
   };
 }
 
-/** Distância em linha reta (haversine), em metros */
-function metersBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  const r = (x: number) => (x * Math.PI) / 180;
-  const h =
-    Math.sin(r(b.lat - a.lat) / 2) ** 2 +
-    Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lng - a.lng) / 2) ** 2;
-  return 2 * 6371000 * Math.asin(Math.sqrt(h));
-}
