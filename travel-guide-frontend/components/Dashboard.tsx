@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/auth/actions";
 import { Countdown } from "@/components/Countdown";
+import { AddIdea } from "@/components/AddIdea";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { MomentChip } from "@/components/MomentChip";
 import { TripMap } from "@/components/TripMap";
@@ -292,8 +293,13 @@ function Ideas({
 }) {
   return (
     <Panel
-      title="Ideias de lugares"
-      aside={total > 0 && <span className="tabular text-sm text-muted">{total}</span>}
+      title="Ideias"
+      aside={
+        <span className="flex items-center gap-3">
+          {total > 0 && <span className="tabular text-sm text-muted">{total}</span>}
+          {ideas && <AddIdea />}
+        </span>
+      }
       className="flex flex-col"
     >
       {!ideas ? (

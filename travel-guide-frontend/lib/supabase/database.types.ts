@@ -162,6 +162,7 @@ export type Database = {
           name: string
           neighborhood: string | null
           notes: string | null
+          osm_ref: string | null
           updated_at: string
           url: string | null
         }
@@ -175,6 +176,7 @@ export type Database = {
           name: string
           neighborhood?: string | null
           notes?: string | null
+          osm_ref?: string | null
           updated_at?: string
           url?: string | null
         }
@@ -188,6 +190,7 @@ export type Database = {
           name?: string
           neighborhood?: string | null
           notes?: string | null
+          osm_ref?: string | null
           updated_at?: string
           url?: string | null
         }
