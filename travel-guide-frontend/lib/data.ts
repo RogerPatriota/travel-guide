@@ -103,6 +103,10 @@ export async function getHomeData(): Promise<HomeData> {
     const p = e.place;
     if (!p || p.lat === null || p.lng === null) continue;
     const date = e.date as ISODate;
+    // Sem modo informado: até 1,2 km da parada anterior é a pé; mais que isso, carro
+    const prev = stopsForRoutes[date]?.at(-1);
+    const mode =
+      e.travel_mode ?? (prev ? (metersBetween(prev, { lat: p.lat, lng: p.lng }) <= 1200 ? "a_pe" : "carro") : null);
     (stops[date] ??= []).push({
       placeId: p.id,
       name: p.name,
@@ -119,7 +123,7 @@ export async function getHomeData(): Promise<HomeData> {
       name: p.name,
       lat: p.lat,
       lng: p.lng,
-      mode: e.travel_mode,
+      mode,
     });
   }
 
@@ -147,9 +151,9 @@ export async function getHomeData(): Promise<HomeData> {
         detail: e.detail ?? "",
         status: e.status,
         moment: e.moment,
-        arrival: e.travel_mode
+        arrival: leg
           ? {
-              mode: e.travel_mode,
+              mode: leg.mode,
               distanceM: leg?.distanceM ?? null,
               durationS: leg?.durationS ?? null,
             }
@@ -178,4 +182,13 @@ export async function getHomeData(): Promise<HomeData> {
       legs,
     },
   };
+}
+
+/** Distância em linha reta (haversine), em metros */
+function metersBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const r = (x: number) => (x * Math.PI) / 180;
+  const h =
+    Math.sin(r(b.lat - a.lat) / 2) ** 2 +
+    Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lng - a.lng) / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
 }

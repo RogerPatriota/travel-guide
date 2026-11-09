@@ -381,6 +381,15 @@ export type Database = {
     }
     Functions: {
       hook_before_user_created: { Args: { event: Json }; Returns: Json }
+      place_idea: {
+        Args: {
+          p_date: string
+          p_moment: Database["public"]["Enums"]["day_moment"]
+          p_source: number
+        }
+        Returns: number
+      }
+      unplace_idea: { Args: { p_id: number }; Returns: number }
     }
     Enums: {
       currency: "BRL" | "ARS" | "USD"

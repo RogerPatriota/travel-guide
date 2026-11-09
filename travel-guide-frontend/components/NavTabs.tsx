@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/", label: "Hoje" },
   { href: "/ideias", label: "Ideias" },
+  { href: "/roteiro", label: "Roteiro" },
 ] as const;
 
 /** Abas do topo. A atual usa o estado de seleção (lima + borda escura), igual ao seletor de dias. */
