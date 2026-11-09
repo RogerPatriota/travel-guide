@@ -77,8 +77,8 @@ export function IdeasBoard({ data }: { data: IdeasData }) {
                 type="button"
                 aria-pressed={moment === "all"}
                 onClick={() => setMoment("all")}
-                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-                  moment === "all" ? "border-fg" : "border-border text-muted hover:border-muted"
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-[background-color,color] duration-150 ${
+                  moment === "all" ? "bg-fg text-surface" : "bg-sunken text-muted hover:text-fg"
                 }`}
               >
                 Todos
@@ -90,9 +90,9 @@ export function IdeasBoard({ data }: { data: IdeasData }) {
                   aria-pressed={moment === m}
                   aria-label={`Só ${momentLabel[m].toLowerCase()}`}
                   onClick={() => setMoment(moment === m ? "all" : m)}
-                  className={`rounded-full border p-0.5 ${moment === m ? "border-fg" : "border-transparent"}`}
+                  className="rounded-full"
                 >
-                  <MomentChip moment={m} />
+                  <MomentChip moment={m} selected={moment === m} />
                 </button>
               ))}
             </div>
