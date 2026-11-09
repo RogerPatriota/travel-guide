@@ -3,7 +3,7 @@
 Projeto `bkztexprtuozfqmnlluz`. Schema em `migrations/`, aplicado pelo MCP (`apply_migration`).
 
 ## Arquivos
-- `migrations/20261105120000_initial_schema.sql`: tabelas, RLS, hook de cadastro, profiles.
+- `migrations/20261106023811_initial_schema.sql`: tabelas, RLS, hook de cadastro, profiles.
 - `seed.sql`: as 4 datas fixas (voos, check-in, check-out). Sem dados pessoais.
 - `tests/rls_smoke.sql`: teste do RLS e dos grants. Cola no SQL Editor; termina sempre com erro
   `OK (n checagens)` ou `FALHOU ...` e não grava nada.
