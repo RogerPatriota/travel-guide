@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { describeKind, type PlaceHit } from "@/lib/places";
 import { createClient } from "@/lib/supabase/server";
-import { tripDays, type DayMoment } from "@/lib/trip";
+import { tripDays, type DayMoment, type ISODate } from "@/lib/trip";
 
 const UA = { "User-Agent": "travel-guide-private-app/0.1" };
 // Capital Federal: a busca não traz lugar homônimo do resto da Argentina
@@ -120,6 +120,22 @@ export async function resolveMapsLink(link: string): Promise<PlaceHit | { error:
     suggestedMoment: base?.suggestedMoment ?? "passeio",
     url: url.href,
   };
+}
+
+/** Dias da viagem que já têm ideia ou parada decidida nesse bairro (para encaixar junto) */
+export async function daysInNeighborhood(neighborhood: string): Promise<ISODate[]> {
+  const n = neighborhood.trim();
+  if (!n || n.length > 100) return [];
+  const supabase = await createClient();
+  // places!inner + filtro na coluna embutida: só as sugestões cujo lugar é desse bairro
+  const { data } = await supabase
+    .from("suggestions")
+    .select("date, place:places!inner(neighborhood)")
+    .in("status", ["ideia", "decidido"])
+    .not("date", "is", null)
+    .eq("place.neighborhood", n);
+  const days = new Set((data ?? []).map((s) => s.date));
+  return tripDays().filter((d) => days.has(d));
 }
 
 const MOMENTS: DayMoment[] = [

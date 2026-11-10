@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { addIdea, resolveMapsLink, searchPlaces } from "@/app/actions/ideas";
+import { addIdea, daysInNeighborhood, resolveMapsLink, searchPlaces } from "@/app/actions/ideas";
 import { MomentChip } from "@/components/MomentChip";
 import type { PlaceHit } from "@/lib/places";
-import { fmtLong, momentLabel, tripDays, type DayMoment } from "@/lib/trip";
+import {
+  fmtDayMonth,
+  fmtLong,
+  fmtWeekday,
+  momentLabel,
+  tripDays,
+  type DayMoment,
+  type ISODate,
+} from "@/lib/trip";
 
 const MOMENTS: DayMoment[] = [
   "cafe_da_manha", "almoco", "lanche", "jantar", "passeio", "mercado", "noite", "outro",
@@ -15,11 +23,26 @@ const isLink = (s: string) => /^https?:\/\//i.test(s.trim());
 const field =
   "block w-full rounded-(--radius-control) border border-border bg-surface px-3 py-2.5 text-base transition-[border-color] duration-150 hover:border-muted";
 
+/** Bairro em destaque, depois tipo e endereço */
+function PlaceMeta({ hit }: { hit: PlaceHit }) {
+  const rest = [hit.category, hit.address].filter(Boolean).join(" · ");
+  if (!hit.neighborhood && !rest) return <>Do link do Google Maps</>;
+  return (
+    <>
+      {hit.neighborhood && <span className="font-medium text-fg">{hit.neighborhood}</span>}
+      {hit.neighborhood && rest && " · "}
+      {rest}
+    </>
+  );
+}
+
 export function AddIdea() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<PlaceHit[]>([]);
   const [place, setPlace] = useState<PlaceHit | null>(null);
+  // Dias que já têm algo no bairro do lugar escolhido (atalho pra encaixar junto)
+  const [sameDays, setSameDays] = useState<ISODate[]>([]);
   const [moment, setMoment] = useState<DayMoment>("passeio");
   const [date, setDate] = useState<string>("");
   const [note, setNote] = useState("");
@@ -41,6 +64,10 @@ export function AddIdea() {
     setPlace(hit);
     setMoment(hit.suggestedMoment);
     setError(null);
+    setSameDays([]);
+    if (hit.neighborhood) {
+      daysInNeighborhood(hit.neighborhood).then(setSameDays, () => {});
+    }
   };
 
   const useLink = () =>
@@ -53,6 +80,7 @@ export function AddIdea() {
   const reset = () => {
     setQuery("");
     setPlace(null);
+    setSameDays([]);
     setDate("");
     setNote("");
     setError(null);
@@ -138,7 +166,7 @@ export function AddIdea() {
                     >
                       <span className="block font-medium">{h.name}</span>
                       <span className="block text-sm text-muted">
-                        {[h.category, h.address, h.neighborhood].filter(Boolean).join(" · ")}
+                        <PlaceMeta hit={h} />
                       </span>
                     </button>
                   </li>
@@ -156,8 +184,7 @@ export function AddIdea() {
             <div className="rounded-(--radius-control) border border-border p-3">
               <p className="font-medium">{place.name}</p>
               <p className="text-sm text-muted">
-                {[place.category, place.address, place.neighborhood].filter(Boolean).join(" · ") ||
-                  "Do link do Google Maps"}
+                <PlaceMeta hit={place} />
               </p>
               <button
                 type="button"
@@ -166,6 +193,28 @@ export function AddIdea() {
               >
                 Trocar lugar
               </button>
+              {sameDays.length > 0 && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <p className="text-sm text-muted">
+                    Já tem coisa em {place.neighborhood} nesses dias. Toque num pra encaixar junto:
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {sameDays.map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={date === d}
+                        onClick={() => setDate(date === d ? "" : d)}
+                        className={`rounded-(--radius-control) border px-2 py-1 text-xs transition-[background-color,border-color] duration-150 ${
+                          date === d ? "border-fg bg-accent text-accent-fg" : "border-border bg-surface hover:border-muted"
+                        }`}
+                      >
+                        {fmtWeekday(d)} <span className="tabular font-mono">{fmtDayMonth(d)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <fieldset>
