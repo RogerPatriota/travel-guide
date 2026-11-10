@@ -41,6 +41,11 @@
   background-color: color-mix(in oklab, var(--moment) 14%, var(--color-surface));
   color: var(--moment);
 }
+/* Selecionada (filtros e "Nova ideia"): cheia, como o pin. Branco na cor passa AA. */
+.moment-chip[data-selected] {
+  background-color: var(--moment);
+  color: var(--color-surface);
+}
 
 html {
   color-scheme: light;

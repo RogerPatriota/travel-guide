@@ -177,16 +177,18 @@ export function AddIdea() {
                     type="button"
                     aria-pressed={moment === m}
                     onClick={() => setMoment(m)}
-                    className={`rounded-full border px-0.5 py-0.5 transition-[border-color] duration-150 ${
-                      moment === m ? "border-fg" : "border-transparent hover:border-border"
-                    }`}
+                    className="rounded-full"
                   >
                     {m === "outro" ? (
-                      <span className="inline-flex px-2 py-0.5 text-xs font-medium text-muted">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium transition-[background-color,color] duration-150 ${
+                          moment === m ? "bg-fg text-surface" : "bg-sunken text-muted"
+                        }`}
+                      >
                         Sem momento
                       </span>
                     ) : (
-                      <MomentChip moment={m} />
+                      <MomentChip moment={m} selected={moment === m} />
                     )}
                   </button>
                 ))}

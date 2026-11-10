@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { signOut } from "@/app/auth/actions";
+import Link from "next/link";
 import { Countdown } from "@/components/Countdown";
 import { AddIdea } from "@/components/AddIdea";
-import { LiveRefresh } from "@/components/LiveRefresh";
 import { MomentChip } from "@/components/MomentChip";
+import { Panel } from "@/components/Panel";
 import { TripMap } from "@/components/TripMap";
-import { VoteButtons } from "@/components/VoteButtons";
 import type { HomeData } from "@/lib/data";
 import {
   fmtDayMonth,
   fmtLong,
   fmtWeekday,
   toLocalDate,
-  trip,
   momentColorVar,
   travelModeLabel,
   type DayMoment,
@@ -24,30 +22,6 @@ import {
 } from "@/lib/trip";
 
 type Selection = ISODate | "all";
-
-function Panel({
-  title,
-  aside,
-  className = "",
-  children,
-}: {
-  title: string;
-  aside?: React.ReactNode;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      className={`rounded-(--radius-panel) border border-border bg-surface p-5 ${className}`}
-    >
-      <header className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="font-display text-lg font-medium">{title}</h2>
-        {aside}
-      </header>
-      {children}
-    </section>
-  );
-}
 
 function DaySelector({
   value,
@@ -282,59 +256,37 @@ function Expenses({ spent }: { spent: HomeData["spent"] | null }) {
   );
 }
 
-function Ideas({
-  ideas,
-  total,
-  partnerName,
-}: {
-  ideas: HomeData["ideas"] | null;
-  total: number;
-  partnerName: string | null;
-}) {
+/** Na home só o resumo; votar e filtrar ficam na aba Ideias */
+function IdeasSummary({ ideas }: { ideas: HomeData["ideas"] | null }) {
+  const waiting = ideas?.filter((i) => !i.myVote) ?? [];
   return (
-    <Panel
-      title="Ideias"
-      aside={
-        <span className="flex items-center gap-3">
-          {total > 0 && <span className="tabular text-sm text-muted">{total}</span>}
-          {ideas && <AddIdea />}
-        </span>
-      }
-      className="flex flex-col"
-    >
+    <Panel title="Ideias" aside={ideas && <AddIdea />} className="flex flex-col">
       {!ideas ? (
         <Loading />
-      ) : ideas.length === 0 ? (
-        <div className="flex flex-1 flex-col justify-center rounded-(--radius-control) border border-dashed border-border p-5">
-          <p className="font-medium text-balance">Nenhum lugar salvo ainda.</p>
-          <p className="mt-1 text-sm text-muted text-pretty">
-            Cada um joga aqui o que quer conhecer. Os dois curtiram, entra no roteiro.
-          </p>
-        </div>
       ) : (
-        // Rola dentro do painel no desktop para não esticar a grade
-        <ul className="divide-y divide-border lg:max-h-[440px] lg:overflow-y-auto lg:pr-1">
-          {ideas.map((p) => (
-            <li key={p.id} className="py-3 first:pt-0 last:pb-0">
-              {/* Onde a ideia entra no roteiro (momento + dia): é isso que se vota */}
-              <p className="flex min-w-0 items-center gap-2">
-                {p.moment !== "outro" && <MomentChip moment={p.moment} />}
-                <span className="truncate font-medium">{p.name}</span>
-              </p>
-              <p className="mt-0.5 truncate text-sm text-muted">
-                {p.date ? fmtLong(p.date) : "Algum dia"}
-                {p.neighborhood && ` · ${p.neighborhood}`}
-              </p>
-              <VoteButtons
-                suggestionId={p.id}
-                placeName={p.name}
-                myVote={p.myVote}
-                partnerVote={p.partnerVote}
-                partnerName={partnerName}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="text-sm text-muted">
+            {waiting.length > 0
+              ? `${waiting.length} esperando o seu voto`
+              : "Nada esperando o seu voto."}
+          </p>
+          {waiting.length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {waiting.slice(0, 4).map((i) => (
+                <li key={i.id} className="flex min-w-0 items-center gap-2">
+                  {i.moment !== "outro" && <MomentChip moment={i.moment} />}
+                  <span className="truncate">{i.name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link
+            href="/ideias"
+            className="mt-auto pt-4 text-sm font-medium underline underline-offset-2 hover:text-muted"
+          >
+            {waiting.length > 0 ? "Votar nas ideias" : "Ver todas as ideias"}
+          </Link>
+        </>
       )}
     </Panel>
   );
@@ -349,31 +301,7 @@ export function Dashboard({ data }: { data: HomeData | null }) {
   );
 
   return (
-    <main className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-      {/* Voto ou roteiro mudou no outro celular: recarrega */}
-      {data && <LiveRefresh />}
-      <header className="mb-8 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div>
-          <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-balance sm:text-5xl">
-            {trip.city} com meu amor
-          </h1>
-          <p className="mt-2 text-muted">
-            {fmtLong(trip.start)} a {fmtLong(trip.end)}, em {trip.neighborhood}
-          </p>
-        </div>
-        {data && (
-          <form action={signOut} className="flex items-center gap-3 text-sm">
-            <span className="text-muted">{data.me.name}</span>
-            <button
-              type="submit"
-              className="rounded-(--radius-control) border border-border bg-surface px-3 py-1.5 transition-[border-color] duration-150 hover:border-muted"
-            >
-              Sair
-            </button>
-          </form>
-        )}
-      </header>
-
+    <>
       {/* grid-cols-1 = minmax(0,1fr): sem isso o seletor de dias estica a coluna e a página rola de lado no celular */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:gap-6">
         <div className="px-1 py-2 lg:col-span-3 lg:col-start-10 lg:row-start-1">
@@ -400,13 +328,9 @@ export function Dashboard({ data }: { data: HomeData | null }) {
         </div>
 
         <div className="flex lg:col-span-3 lg:col-start-10 lg:row-start-2 [&>section]:flex-1">
-          <Ideas
-            ideas={data?.ideas ?? null}
-            total={data?.ideasTotal ?? 0}
-            partnerName={data?.partner?.name ?? null}
-          />
+          <IdeasSummary ideas={data?.ideas ?? null} />
         </div>
       </div>
-    </main>
+    </>
   );
 }
