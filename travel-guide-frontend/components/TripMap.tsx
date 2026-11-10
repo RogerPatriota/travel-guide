@@ -36,6 +36,13 @@ function legsGeoJSON(legs: Leg[]): GeoJSON.FeatureCollection {
   };
 }
 
+// Ícone fixo (sem dado de usuário), por isso pode ir como innerHTML
+const HOUSE_ICON =
+  '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+  '<path d="M2.5 7.6 8 3l5.5 4.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>' +
+  '<path d="M4 6.6V13h2.9v-3h2.2v3H12V6.6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
+  "</svg>";
+
 /** color = token do momento (lib/trip.ts momentColorVar); hospedagem usa a rota */
 function pinElement(
   label: string,
@@ -50,8 +57,9 @@ function pinElement(
   const route = color;
   const surface = token("--color-surface");
   if (content === null) {
-    // Hospedagem: anel verde com miolo claro
-    el.style.cssText = `width:20px;height:20px;border-radius:9999px;background:${surface};border:5px solid ${route};box-shadow:0 0 0 2px ${surface};cursor:pointer`;
+    // Hospedagem: casinha clara num círculo verde (a cor do caminho)
+    el.style.cssText = `width:28px;height:28px;border-radius:9999px;background:${route};color:${surface};border:2px solid ${surface};box-shadow:0 0 0 1px ${route};cursor:pointer;padding:0;display:grid;place-items:center`;
+    el.innerHTML = HOUSE_ICON;
   } else if (content === "" && pending) {
     // Em votação, sem ordem: bolinha vazada na cor do momento
     el.style.cssText = `width:16px;height:16px;border-radius:9999px;background:${surface};border:3px solid ${route};cursor:pointer;padding:0`;
