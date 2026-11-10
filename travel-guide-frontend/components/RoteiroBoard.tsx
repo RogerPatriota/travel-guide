@@ -20,6 +20,7 @@ import { placeIdea, unplaceIdea } from "@/app/actions/roteiro";
 import { AddIdea } from "@/components/AddIdea";
 import { MomentChip } from "@/components/MomentChip";
 import { TripMap } from "@/components/TripMap";
+import { groupByNeighborhood, neighborhoodsOf } from "@/lib/bairros";
 import type { RoteiroCard, RoteiroData } from "@/lib/roteiro";
 import {
   fmtDayMonth,
@@ -90,6 +91,9 @@ export function RoteiroBoard({ data }: { data: RoteiroData }) {
 
   const all = [...data.bank, ...data.placed];
   const rows = data.placed.some((c) => c.moment === "outro") ? [...ROWS, "outro" as const] : ROWS;
+  // Bairros do dia: aparecem no cabeçalho da grade e no título do mapa
+  const bairrosOf = (d: ISODate) => neighborhoodsOf(data.placed.filter((c) => c.date === d));
+  const dayBairros = bairrosOf(day);
 
   const place = (card: RoteiroCard, date: ISODate, moment: DayMoment) => {
     if (card.date === date && card.moment === moment) return;
@@ -230,29 +234,34 @@ export function RoteiroBoard({ data }: { data: RoteiroData }) {
             ))}
           </div>
 
-          <div className="overflow-x-auto pb-2">
-            <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-3 lg:w-max lg:grid-cols-[110px_repeat(9,180px)]">
+          <div className="overflow-x-auto rounded-(--radius-panel) border border-border">
+            {/* Painel branco; as linhas entre células são o fundo aparecendo pelo gap de 1px */}
+            <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-px bg-border lg:w-max lg:grid-cols-[120px_repeat(9,180px)]">
               {/* Cabeçalho dos dias (desktop): clicar põe o dia no mapa */}
-              <div className="hidden lg:block" />
+              <div className="sticky left-0 z-10 hidden bg-surface lg:block" />
               {days.map((d) => (
                 <button
                   key={d}
                   type="button"
                   aria-pressed={day === d}
                   onClick={() => setDay(d)}
-                  className={`hidden rounded-(--radius-control) border px-2 py-1.5 text-left transition-[background-color,border-color] duration-150 lg:block ${
-                    day === d ? "border-fg bg-accent text-accent-fg" : "border-transparent hover:border-border"
+                  className={`hidden px-3 py-2 text-left transition-[background-color] duration-150 lg:block ${
+                    day === d ? "bg-accent text-accent-fg" : "bg-surface hover:bg-sunken"
                   }`}
                 >
                   <span className="block text-xs text-current/70">{fmtWeekday(d)}</span>
                   <span className="tabular font-mono text-sm font-medium">{fmtDayMonth(d)}</span>
+                  {/* Bairros do dia (decididos primeiro) */}
+                  <span className="mt-0.5 block truncate text-xs text-current/70" title={bairrosOf(d).join(" · ")}>
+                    {bairrosOf(d).join(" · ")}
+                  </span>
                 </button>
               ))}
 
               {/* Chegada/Saída: voo e hospedagem, só leitura */}
               <RowLabel>Chegada / saída</RowLabel>
               {days.map((d) => (
-                <div key={d} className={d === day ? "" : "hidden lg:block"}>
+                <div key={d} className={`bg-surface p-2 ${d === day ? "" : "hidden lg:block"}`}>
                   {data.logistics
                     .filter((l) => l.date === d)
                     .map((l) => (
@@ -294,7 +303,8 @@ export function RoteiroBoard({ data }: { data: RoteiroData }) {
                 Recolher
               </button>
             </div>
-            <div className="h-[calc(100vh-7rem)]">{mapPanel}</div>
+            <p className="mb-2 min-h-5 truncate text-sm text-muted">{dayBairros.join(" · ")}</p>
+            <div className="h-[calc(100vh-9rem)]">{mapPanel}</div>
           </aside>
         ) : (
           <div className="hidden lg:block">
@@ -328,8 +338,9 @@ function Rail({ label, onOpen, dropId }: { label: string; onOpen: () => void; dr
   );
 }
 
+/** Primeira coluna: fica parada ao rolar a grade para o lado */
 function RowLabel({ children }: { children: React.ReactNode }) {
-  return <div className="pt-1 text-sm font-medium text-muted">{children}</div>;
+  return <div className="sticky left-0 z-10 bg-surface p-2 text-sm font-medium text-muted">{children}</div>;
 }
 
 function Row({
@@ -351,9 +362,7 @@ function Row({
 }) {
   return (
     <>
-      <div className="pt-1">
-        {moment === "outro" ? <RowLabel>Outro</RowLabel> : <MomentChip moment={moment} />}
-      </div>
+      <RowLabel>{moment === "outro" ? "Outro" : <MomentChip moment={moment} />}</RowLabel>
       {days.map((d) => (
         <Cell
           key={d}
@@ -391,8 +400,8 @@ function Cell({
   return (
     <div
       ref={setNodeRef}
-      className={`space-y-2 rounded-(--radius-control) transition-[background-color] duration-150 ${
-        isOver ? "bg-sunken" : ""
+      className={`space-y-2 p-2 transition-[background-color] duration-150 ${
+        isOver ? "bg-sunken" : "bg-surface"
       } ${hiddenOnMobile ? "hidden lg:block" : ""}`}
     >
       {cards.map((c) => (
@@ -458,21 +467,24 @@ function PlacedCard({
   onUnplace: (card: RoteiroCard) => void;
 }) {
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({ id: `card|${card.id}` });
+  // Mouse: o card todo é a alça (clique em Devolver/votar segue clique, o arrasto só começa após 6 px).
+  // Teclado: só o nome, para não aninhar botões dentro de um botão.
+  const { onKeyDown, ...pointer } = listeners ?? {};
   const waitingMe = card.status === "ideia" && card.myVote === null;
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-(--radius-control) border bg-surface px-2.5 py-2 ${
+      {...pointer}
+      className={`cursor-grab rounded-(--radius-control) border bg-surface px-2.5 py-2 ${
         card.status === "decidido" ? "border-fg" : waitingMe ? "border-muted" : "border-border"
       } ${isDragging ? "opacity-40" : ""}`}
     >
       <div className="flex items-baseline justify-between gap-2">
-        {/* Só o nome é a alça de arrastar */}
         <p
           {...attributes}
-          {...listeners}
+          onKeyDown={onKeyDown as React.KeyboardEventHandler | undefined}
           aria-label={`Mover ${card.name}`}
-          className="min-w-0 cursor-grab truncate text-sm font-medium"
+          className="min-w-0 truncate text-sm font-medium"
         >
           {card.name}
         </p>
@@ -485,6 +497,7 @@ function PlacedCard({
           Devolver
         </button>
       </div>
+      {card.neighborhood && <p className="truncate text-xs text-muted">{card.neighborhood}</p>}
       <StatusLine card={card} partnerName={partnerName} />
     </div>
   );
@@ -530,13 +543,23 @@ function Bank({
           Nada solto. Salve uma ideia com + Ideia, ou arraste um card do dia de volta pra cá.
         </p>
       ) : (
-        <ul className="space-y-2 lg:max-h-[60vh] lg:overflow-y-auto lg:pr-1">
-          {cards.map((c) => (
-            <li key={c.id}>
-              <BankCard card={c} picked={picked?.id === c.id} onPick={() => onPick(c)} />
-            </li>
+        <div className="space-y-3 lg:max-h-[60vh] lg:overflow-y-auto lg:pr-1">
+          {/* Por bairro: pega tudo de Monserrat e monta o dia de uma vez */}
+          {groupByNeighborhood(cards).map(([bairro, list]) => (
+            <section key={bairro} aria-label={bairro}>
+              <h3 className="mb-1.5 text-xs font-medium text-muted">
+                {bairro} <span className="tabular">{list.length}</span>
+              </h3>
+              <ul className="space-y-2">
+                {list.map((c) => (
+                  <li key={c.id}>
+                    <BankCard card={c} picked={picked?.id === c.id} onPick={() => onPick(c)} />
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </aside>
   );
@@ -553,12 +576,23 @@ function BankCard({ card, picked, onPick }: { card: RoteiroCard; picked: boolean
       aria-pressed={picked}
       className={`cursor-grab ${isDragging ? "opacity-40" : ""}`}
     >
-      <CardFace card={card} picked={picked} />
+      {/* O bairro já é o título do grupo */}
+      <CardFace card={card} picked={picked} bairro={false} />
     </div>
   );
 }
 
-function CardFace({ card, picked = false, lifted = false }: { card: RoteiroCard; picked?: boolean; lifted?: boolean }) {
+function CardFace({
+  card,
+  picked = false,
+  lifted = false,
+  bairro = true,
+}: {
+  card: RoteiroCard;
+  picked?: boolean;
+  lifted?: boolean;
+  bairro?: boolean;
+}) {
   return (
     <div
       className={`rounded-(--radius-control) border p-2.5 transition-[background-color,border-color] duration-150 ${
@@ -569,7 +603,9 @@ function CardFace({ card, picked = false, lifted = false }: { card: RoteiroCard;
         {card.moment !== "outro" && <MomentChip moment={card.moment} />}
         <span className="truncate text-sm font-medium">{card.name}</span>
       </p>
-      {card.neighborhood && <p className="mt-0.5 truncate text-xs text-current/70">{card.neighborhood}</p>}
+      {bairro && card.neighborhood && (
+        <p className="mt-0.5 truncate text-xs text-current/70">{card.neighborhood}</p>
+      )}
     </div>
   );
 }
