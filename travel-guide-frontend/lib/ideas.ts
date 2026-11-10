@@ -1,7 +1,8 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import type { VoteValue } from "@/lib/data";
+import type { MapPin, VoteValue } from "@/lib/data";
+import { metersBetween } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/database.types";
 import type { DayMoment, ISODate } from "@/lib/trip";
@@ -15,6 +16,11 @@ export type IdeaDetail = {
   neighborhood: string | null;
   address: string | null;
   url: string | null;
+  placeId: number;
+  lat: number | null;
+  lng: number | null;
+  /** Em linha reta até a hospedagem (null sem coordenada ou sem hospedagem no banco) */
+  metersFromStay: number | null;
   moment: DayMoment;
   date: ISODate | null;
   status: IdeaStatus;
@@ -28,6 +34,8 @@ export type IdeaDetail = {
 export type IdeasData = {
   ideas: IdeaDetail[];
   partnerName: string | null;
+  /** Hospedagem: aparece no mapa dos detalhes de cada ideia */
+  stays: MapPin[];
 };
 
 /** Todas as sugestões (qualquer status) com votos, para a aba Ideias */
@@ -38,25 +46,35 @@ export async function getIdeasData(): Promise<IdeasData> {
   const userId = auth?.claims?.sub;
   if (!userId) redirect("/login");
 
-  const [profiles, suggestions] = await Promise.all([
+  const [profiles, suggestions, stayRows] = await Promise.all([
     supabase.from("profiles").select("id, display_name"),
     supabase
       .from("suggestions")
       .select(
-        "id, moment, date, status, note, created_by, place:places!inner(name, category, neighborhood, notes, url), votes(user_id, value)",
+        "id, moment, date, status, note, created_by, place:places!inner(id, name, category, neighborhood, notes, url, lat, lng), votes(user_id, value)",
       )
       .order("date", { nullsFirst: false })
       .order("moment")
       .order("created_at", { ascending: false }),
+    supabase.from("places").select("id, name, lat, lng").eq("category", "hospedagem").not("lat", "is", null),
   ]);
-  for (const r of [profiles, suggestions]) {
+  for (const r of [profiles, suggestions, stayRows]) {
     if (r.error) throw new Error(`Supabase: ${r.error.message}`);
   }
 
   const names = new Map((profiles.data ?? []).map((p) => [p.id, p.display_name]));
+  const stays: MapPin[] = (stayRows.data ?? []).map((s) => ({
+    placeId: s.id,
+    name: s.name,
+    lat: s.lat!,
+    lng: s.lng!,
+  }));
+  const fromStay = (lat: number | null, lng: number | null) =>
+    stays[0] && lat !== null && lng !== null ? Math.round(metersBetween(stays[0], { lat, lng })) : null;
 
   return {
     partnerName: (profiles.data ?? []).find((p) => p.id !== userId)?.display_name ?? null,
+    stays,
     ideas: (suggestions.data ?? []).map((s) => ({
       id: s.id,
       name: s.place.name,
@@ -64,6 +82,10 @@ export async function getIdeasData(): Promise<IdeasData> {
       neighborhood: s.place.neighborhood,
       address: s.place.notes,
       url: s.place.url,
+      placeId: s.place.id,
+      lat: s.place.lat,
+      lng: s.place.lng,
+      metersFromStay: fromStay(s.place.lat, s.place.lng),
       moment: s.moment,
       date: s.date as ISODate | null,
       status: s.status,
