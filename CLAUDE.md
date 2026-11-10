@@ -19,10 +19,11 @@ Painel privado para um casal (Roger e Nathalia) planejar e acompanhar a viagem a
 ## App hoje (abas no topo: Hoje · Ideias · Roteiro)
 - **Layout** `app/(app)/layout.tsx`: cabeçalho (`UserMenu` em Suspense, `LiveRefresh` com realtime em votes/suggestions/events → `router.refresh()`) e `NavTabs`.
 - **Hoje** `app/(app)/page.tsx` → `Dashboard.tsx`: seletor de dias, mapa do dia (`TripMap.tsx`) com rota, próximas datas, contagem, resumo de ideias (link pra /ideias). Dados: `lib/data.ts`.
-- **Ideias** `app/(app)/ideias` → `IdeasBoard.tsx`: todas as sugestões, filtros por status/momento/dia, voto "Curti · Tanto faz · Não curti" (`VoteButtons.tsx`). `AddIdea.tsx` (dialog): busca no Photon (bbox de CABA) ou link do Google Maps, escolhe momento, dia ("algum dia" = sem data) e nota. Actions em `app/actions/ideas.ts` e `vote.ts`. Dados: `lib/ideas.ts`.
+- **Ideias** `app/(app)/ideias` → `IdeasBoard.tsx`: todas as sugestões, filtros por status/momento/dia, voto "Curti · Tanto faz · Não curti" (`VoteButtons.tsx`). `AddIdea.tsx` (dialog): busca no Photon (bbox de CABA) ou link do Google Maps, escolhe momento, dia ("algum dia" = sem data) e nota. Ao escolher um lugar, o bairro aparece em destaque e `daysInNeighborhood` (ações em `ideas.ts`) mostra os dias que já têm ideia no mesmo bairro, para encaixar junto. Actions em `app/actions/ideas.ts` e `vote.ts`. Dados: `lib/ideas.ts`.
 - **Roteiro** `app/(app)/roteiro` → `RoteiroBoard.tsx` (dados `lib/roteiro.ts`, actions `app/actions/roteiro.ts`):
   - 3 painéis: ideias soltas (recolhível) · grade momento × dia (9 dias) · mapa do dia em foco (recolhível). Estado de recolher em localStorage (`roteiro:ideias`, `roteiro:mapa`). No celular: botões "Ideias soltas"/"Mapa do dia" e um dia por vez.
-  - Arrastar (dnd-kit, também clique-e-clique no toque) uma ideia para uma célula chama a RPC `place_idea` (conta como o "curti" de quem encaixou); "Devolver" chama `unplace_idea`.
+  - Bairros: o cabeçalho de cada dia mostra os bairros dos cards daquele dia (decididos primeiro); o mapa mostra os bairros do dia em foco; as ideias soltas são agrupadas por bairro (`lib/bairros.ts`); o card encaixado mostra o bairro. A grade é um painel branco com linhas entre dias e momentos; a primeira coluna fica fixa ao rolar.
+  - Arrastar (dnd-kit, também clique-e-clique no toque) uma ideia para uma célula chama a RPC `place_idea` (conta como o "curti" de quem encaixou); "Devolver" chama `unplace_idea`. No mouse, o card inteiro é a alça de arrasto; no teclado, só o nome.
   - **Sem voto no Roteiro**: cada card mostra só a situação (✓ Decidido · relógio "Falta você · votar" → /ideias · "Falta {parceiro}").
   - No mapa, rota e numeração **só entre decididos**; pendentes são bolinhas vazadas sem número (são alternativas, não sequência).
 - **Rotas** `lib/routes.ts`: OSRM público (`routing.openstreetmap.de`, carro/a pé/bike), trechos cacheados em `route_legs`. Sem `travel_mode`: ≤1200 m a pé, senão carro.
@@ -35,12 +36,13 @@ Painel privado para um casal (Roger e Nathalia) planejar e acompanhar a viagem a
 - Colunas em inglês, valores de enum em português. Tipos em `lib/supabase/database.types.ts` (gerar pelo MCP e conferir).
 
 ## Estado das branches (09/11/2026)
-- `main` tem até a captura de ideias (PR #3).
-- **`feat/abas`** (abas Hoje/Ideias/Roteiro + página Ideias + fix do chip) e **`feat/roteiro`** (aba Roteiro; fica em cima da `feat/abas`) estão no GitHub esperando merge. **Ordem: primeiro `feat/abas`, depois `feat/roteiro`.** O usuário faz o merge pelo GitHub.
+- `main` (`037c045`) tem tudo que estava em `feat/abas`, `feat/roteiro` e `feat/bairros`, mesclado localmente pelo Claude e enviado ao GitHub. Essas três branches foram apagadas, local e remota.
+- Não há branch de feature aberta. Ao começar uma nova, crie `feat/<feature>` a partir da `main`.
+- Branches antigas que continuam no remoto e já estão dentro da `main`: `feat/momentos-do-dia`, `feat/rotas-do-dia`. Podem ser apagadas quando o usuário pedir.
 - A migration `20261109162810_roteiro.sql` **já está aplicada no banco**.
 
 ## Próximos passos / radar (não começar sem o usuário pedir)
-- Agrupar dias por bairro de Buenos Aires (ex.: bairro do dia no cabeçalho da grade e no mapa).
+- Resumo por lugar com IA (adiado em 09/11/2026: o usuário escolheu seguir sem IA por enquanto). Quando for fazer: coluna `places.summary` (migration), geração no servidor ao salvar o lugar, chave `ANTHROPIC_API_KEY` no `.env.local` (criada na console.anthropic.com com limite mensal). Custo estimado: centavos por lugar com Haiku 5.5; a busca web cobra à parte.
 - Aba "Viagem" com Hospedagem e Passagem.
 - Gastos: lançar, converter moeda, acertar contas ("quem deve quanto pra quem").
 - Polimento: mobile, PWA/offline para usar durante a viagem. Deploy na Vercel.
