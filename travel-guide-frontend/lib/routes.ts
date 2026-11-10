@@ -25,6 +25,8 @@ export type Leg = {
   durationS: number | null;
   /** true = linha reta (sem rota pelas ruas: transporte público ou serviço fora) */
   approximate: boolean;
+  /** true = a parada de destino ainda está em votação (Roteiro desenha mais claro) */
+  pending?: boolean;
 };
 
 // Servidores OSRM da FOSSGIS (OpenStreetMap Alemanha): grátis, sem chave, uso justo.
@@ -174,4 +176,18 @@ async function fetchRoute(mode: TravelMode, from: Stop, to: Stop) {
     console.error("OSRM", mode, err instanceof Error ? err.message : err);
     return null;
   }
+}
+
+/** Distância em linha reta (haversine), em metros */
+export function metersBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const rad = (x: number) => (x * Math.PI) / 180;
+  const h =
+    Math.sin(rad(b.lat - a.lat) / 2) ** 2 +
+    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+}
+
+/** Sem modo informado: até 1,2 km da parada anterior é a pé; mais que isso, carro */
+export function inferMode(prev: { lat: number; lng: number }, next: { lat: number; lng: number }): TravelMode {
+  return metersBetween(prev, next) <= 1200 ? "a_pe" : "carro";
 }

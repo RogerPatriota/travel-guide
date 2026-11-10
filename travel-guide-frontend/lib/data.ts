@@ -1,7 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { getLegs, type Leg, type Stop } from "@/lib/routes";
+import { getLegs, inferMode, type Leg, type Stop } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/database.types";
 import type { DayMoment, ISODate, TripEvent } from "@/lib/trip";
@@ -23,7 +23,14 @@ export type IdeaCard = {
 };
 
 export type MapPin = { placeId: number; name: string; lat: number; lng: number };
-export type MapStop = MapPin & { eventId: number; title: string; time?: string; moment: DayMoment };
+export type MapStop = MapPin & {
+  eventId: number;
+  title: string;
+  time?: string;
+  moment: DayMoment;
+  /** Ainda em votação (só no Roteiro): pin vazado */
+  pending?: boolean;
+};
 
 export type MapData = {
   /** Hospedagem: aparece em qualquer dia */
@@ -103,6 +110,10 @@ export async function getHomeData(): Promise<HomeData> {
     const p = e.place;
     if (!p || p.lat === null || p.lng === null) continue;
     const date = e.date as ISODate;
+    // Sem modo informado: até 1,2 km da parada anterior é a pé; mais que isso, carro
+    const prev = stopsForRoutes[date]?.at(-1);
+    const mode =
+      e.travel_mode ?? (prev ? inferMode(prev, { lat: p.lat, lng: p.lng }) : null);
     (stops[date] ??= []).push({
       placeId: p.id,
       name: p.name,
@@ -119,7 +130,7 @@ export async function getHomeData(): Promise<HomeData> {
       name: p.name,
       lat: p.lat,
       lng: p.lng,
-      mode: e.travel_mode,
+      mode,
     });
   }
 
@@ -147,9 +158,9 @@ export async function getHomeData(): Promise<HomeData> {
         detail: e.detail ?? "",
         status: e.status,
         moment: e.moment,
-        arrival: e.travel_mode
+        arrival: leg
           ? {
-              mode: e.travel_mode,
+              mode: leg.mode,
               distanceM: leg?.distanceM ?? null,
               durationS: leg?.durationS ?? null,
             }
@@ -179,3 +190,4 @@ export async function getHomeData(): Promise<HomeData> {
     },
   };
 }
+

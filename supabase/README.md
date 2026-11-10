@@ -4,6 +4,13 @@ Projeto `bkztexprtuozfqmnlluz`. Schema em `migrations/`, aplicado pelo MCP (`app
 
 ## Arquivos
 - `migrations/20261106023811_initial_schema.sql`: tabelas, RLS, hook de cadastro, profiles.
+- `migrations/20261107194141_day_routes.sql`: ordem e modo de transporte dos eventos, cache `route_legs`.
+- `migrations/20261107211642_day_moments.sql`: momentos do dia e `suggestions` (lugar num momento).
+- `migrations/20261107213502_voting.sql`: votos por sugestão; os dois curtiram → decidido + evento.
+- `migrations/20261107222119_places_osm_ref.sql`: `places.osm_ref` para não duplicar lugar.
+- `migrations/20261109162810_roteiro.sql`: RPCs `place_idea`/`unplace_idea` e `private.moment_rank`.
+
+Todas já aplicadas no banco. O nome de cada arquivo é a versão que o banco registrou.
 - `seed.sql`: as 4 datas fixas (voos, check-in, check-out). Sem dados pessoais.
 - `tests/rls_smoke.sql`: teste do RLS e dos grants. Cola no SQL Editor; termina sempre com erro
   `OK (n checagens)` ou `FALHOU ...` e não grava nada.
